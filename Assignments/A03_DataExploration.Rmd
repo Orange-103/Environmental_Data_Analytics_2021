@@ -78,7 +78,7 @@ summary(Neonics$Species.Common.Name)
 class(Neonics$Conc.1..Author.)
 ```
 
-> Answer: 
+> Answer: Beacuse it is a concentration where the % sign is in the next column. If we treat this column as numeric data, the calculation will be 100 time larger than actural value.
 
 
 
@@ -86,7 +86,9 @@ class(Neonics$Conc.1..Author.)
 
 9. Using `geom_freqpoly`, generate a plot of the number of studies conducted by publication year. 
 ```{r}
-
+library(ggplot2)
+ggplot(Neonics, aes(x = Publication.Year))+
+  geom_freqpoly()
 ```
 
 10. Reproduce the same graph but now add a color aesthetic so that different Test.Location are displayed as different colors.
