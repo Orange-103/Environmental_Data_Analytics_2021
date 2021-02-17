@@ -1,6 +1,6 @@
 ---
 title: "Assignment 4: Data Wrangling"
-author: "Student Name"
+author: "Chengxi Li"
 output: pdf_document
 geometry: margin=2.54cm
 ---
@@ -20,13 +20,31 @@ The completed exercise is due on Tuesday, Feb 16 @ 11:59pm.
 
 ## Set up your session 
 1. Check your working directory, load the `tidyverse` and `lubridate` packages, and upload all four raw data files associated with the EPA Air dataset. See the README file for the EPA air datasets for more information (especially if you have not worked with air quality data previously). 
+```{r}
+getwd()
+library(tidyverse)
+library(lubridate)
+O3_2018 <- read.csv("./Data/Raw/EPAair_O3_NC2018_raw.csv", stringsAsFactors = TRUE)
+O3_2019 <- read.csv("./Data/Raw/EPAair_O3_NC2019_raw.csv", stringsAsFactors = TRUE)
+PM25_2018 <- read.csv("./Data/Raw/EPAair_PM25_NC2018_raw.csv", stringsAsFactors = TRUE)
+PM25_2019 <- read.csv("./Data/Raw/EPAair_PM25_NC2019_raw.csv", stringsAsFactors = TRUE)
+```
 
 2. Explore the dimensions, column names, and structure of the datasets. 
 
 ```{r, message = FALSE}
-#1
+#1 dimensions of the datasets
+dim(PM25_2019)
+dim(PM25_2018)
+dim(O3_2019)
+dim(O3_2018)
 
-#2
+#2 column names of the datasets
+colnames(PM25_2019)
+colnames(PM25_2018)
+colnames(O3_2019)
+colnames(O3_2018)
+
 ```
 
 ## Wrangle individual datasets to create processed files.
@@ -37,15 +55,27 @@ The completed exercise is due on Tuesday, Feb 16 @ 11:59pm.
 
 ```{r}
 #3
+O3_2018$Date <- as.Date(O3_2018$Date, format = "%m/%d/%Y")
+O3_2019$Date <- as.Date(O3_2019$Date, format = "%m/%d/%Y")
+PM25_2018$Date <- as.Date(PM25_2018$Date, format = "%m/%d/%Y")
+PM25_2019$Date <- as.Date(PM25_2019$Date, format = "%m/%d/%Y")
 
 #4
+O3_2018 <- select(O3_2018,Date, DAILY_AQI_VALUE, Site.Name, AQS_PARAMETER_DESC, COUNTY, SITE_LATITUDE, SITE_LONGITUDE)
+O3_2019 <- select(O3_2019,Date, DAILY_AQI_VALUE, Site.Name, AQS_PARAMETER_DESC, COUNTY, SITE_LATITUDE, SITE_LONGITUDE)
+PM25_2018 <- select(PM25_2018,Date, DAILY_AQI_VALUE, Site.Name, AQS_PARAMETER_DESC, COUNTY, SITE_LATITUDE, SITE_LONGITUDE)
+PM25_2019 <- select(PM25_2019,Date, DAILY_AQI_VALUE, Site.Name, AQS_PARAMETER_DESC, COUNTY, SITE_LATITUDE, SITE_LONGITUDE)
 
 #5
+PM25_2018$AQS_PARAMETER_DESC <-("PM2.5")
+PM25_2019$AQS_PARAMETER_DESC <-("PM2.5")
 
 #6
-
+write.csv(O3_2018, row.names = FALSE, file = "./Data/Processed/EPAair_O3_NC2018_processed.csv")
+write.csv(O3_2019, row.names = FALSE, file = "./Data/Processed/EPAair_O3_NC2019_processed.csv")
+write.csv(PM25_2018, row.names = FALSE, file = "./Data/Processed/EPAair_PM25_NC2018_processed.csv")
+write.csv(PM25_2019, row.names = FALSE, file = "./Data/Processed/EPAair_PM25_NC201_processed.csv")
 ```
-
 
 ## Combine datasets
 7. Combine the four datasets with `rbind`. Make sure your column names are identical prior to running this code. 
@@ -62,14 +92,26 @@ The completed exercise is due on Tuesday, Feb 16 @ 11:59pm.
 
 ```{r}
 #7
+O3_PM25_NC1819 <- rbind(PM25_2019,PM25_2018,O3_2019,O3_2018)
 
 #8
+O3_PM25_NC1819 <- 
+  O3_PM25_NC1819 %>%
+  filter(Site.Name == "Linville Falls" | Site.Name == "Durham Armory" | Site.Name == "Leggett" |Site.Name ==  "Hattie Avenue" | Site.Name == "Clemmons Middle" |Site.Name == "Mendenhall School" |Site.Name == "Frying Pan Mountain" |Site.Name == "West Johnston Co." |Site.Name == "Garinger High School" |Site.Name == "Castle Hayne" |Site.Name == "Pitt Agri. Center" |Site.Name == "Bryson City" |Site.Name == "Millbrook School")%>%
+  group_by(Date, Site.Name, AQS_PARAMETER_DESC, COUNTY) %>%
+  summarise(DAILY_AQI_VALUE = mean(DAILY_AQI_VALUE),
+            SITE_Longitude = mean(SITE_LONGITUDE),
+            SITE_Latitude = mean(SITE_LATITUDE)) %>%
+  mutate(Month = month (Date), Year = year (Date)) 
 
 #9
+O3_PM25_NC1819 <- pivot_wider(O3_PM25_NC1819, names_from = AQS_PARAMETER_DESC, values_from = DAILY_AQI_VALUE)
 
 #10
+dim(O3_PM25_NC1819)
 
 #11
+write.csv(O3_PM25_NC1819, row.names = FALSE, file = "./Data/Processed/EPAair_O3_PM25_NC1718_Processed.csv")
 
 ```
 
@@ -81,13 +123,29 @@ The completed exercise is due on Tuesday, Feb 16 @ 11:59pm.
 
 ```{r}
 #12a
+Summary <-
+  O3_PM25_NC1819 %>%
+  group_by(Site.Name, Month, Year) %>%
+  summarise(Mean_O3 = mean(Ozone),
+            Mean_PM2.5 = mean(PM2.5))
 
 #12b
+Summary <-
+  Summary %>%
+  drop_na(Month) %>%
+  drop_na(Year)
+
+#Summary <-
+  #Summary %>%
+  #na.omit(Month) %>%
+  #na.omit(Year)
+  
 
 #13
+dim(Summary)
 
 ```
 
 14. Why did we use the function `drop_na` rather than `na.omit`?
 
-> Answer: 
+> Answer: when applying "drop_na" to month and year, only the rows with missing month and year will be droped. However, if we use "na.omit", any row with missing value (na) will be removed. We use "drop_na" becasue we want to remove the rows without timestamp, but not those missing one AQI measurement.
